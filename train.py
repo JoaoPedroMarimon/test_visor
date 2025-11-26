@@ -21,23 +21,23 @@ print("Iniciando treinamento...")
 print("="*60)
 
 # Carregar modelo pré-treinado YOLOv8 nano (o mais leve)
-model = YOLO('yolov8n.pt')
+model = YOLO('yolov8s.pt')
 
-# Treinar o modelo
 results = model.train(
-    data='data.yaml',           # Arquivo de configuração
-    epochs=100,                 # Número de épocas (voltas completas no dataset)
-    imgsz=640,                  # Tamanho das imagens
-    batch=16,                   # Quantas imagens processa por vez (reduza para 8 se der erro de memória)
-    patience=20,                # Para o treino se não melhorar por 20 épocas
-    device=device,              # GPU ou CPU
-    project='adesivo_detection', # Nome da pasta onde salva resultados
-    name='run1',                # Nome desta execução
-    save=True,                  # Salvar checkpoints
-    plots=True,                 # Gerar gráficos
-    workers=4,                  # Threads para carregar dados (reduza para 2 se der erro)
-    verbose=True                # Mostrar detalhes durante treino
+    data='data.yaml',
+    epochs=100,
+    imgsz=640,
+    batch=4,            # antes 16
+    patience=20,
+    device=device,
+    project='adesivo_detection',
+    name='run1',
+    save=True,
+    plots=False,        # antes True
+    workers=1,          # antes 4
+    verbose=True
 )
+
 
 print("\n" + "="*60)
 print("✓ TREINAMENTO CONCLUÍDO!")

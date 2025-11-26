@@ -5,10 +5,9 @@ from sklearn.model_selection import train_test_split
 # ===========================================
 # AJUSTE ESTES CAMINHOS CONFORME SEU SISTEMA
 # ===========================================
-SOURCE_IMAGES_COM = 'novos_dados_ip/com_adesivo'  # Imagens COM adesivo
-SOURCE_IMAGES_SEM = 'novos_dados_ip/sem_adesivo'  # Imagens SEM adesivo
-SOURCE_LABELS = r'C:\Users\jo060842\Downloads\labels_mysem_adesivo_2025-11-24-05-18-33'  # Labels do Makesense
-
+SOURCE_IMAGES_COM = '/home/inet/Área de Trabalho/test_visor/novos_dados_ip/com_adesivo'
+SOURCE_IMAGES_SEM = '/home/inet/Área de Trabalho/test_visor/novos_dados_ip/sem_adesivo'
+SOURCE_LABELS = '/home/inet//Downloads/esse(1)'
 # Criar estrutura de pastas
 print("Criando estrutura de pastas...")
 os.makedirs('dataset/images/train', exist_ok=True)
