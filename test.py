@@ -22,7 +22,9 @@ PROCESS_EVERY_N_FRAMES = 2  # Processar detecção a cada 2 frames
 
 # Carregar modelo
 print("Carregando modelo...")
-model = YOLO('adesivo_detection/run12/weights/best.pt')
+#model = YOLO('adesivo_detection/adesivo_detection_results/weights/best.pt')
+model = YOLO('adesivo_detection/run1/weights/best.pt')
+
 print("✓ Modelo carregado!")
 
 # Conectar via RTSP
@@ -55,7 +57,7 @@ print("⌨️  Q - Sair | S - Salvar | UP/DOWN - Ajustar sensibilidade")
 print("="*60 + "\n")
 
 # Configurações
-confidence_threshold = 0.96  # Começar com 5% (modelo tem recall 100%)
+confidence_threshold = 0.95  # Começar com 5% (modelo tem recall 100%)
 detection_history = []
 HISTORY_SIZE = 10  # Histórico maior para estabilidade
 saved_count = 0

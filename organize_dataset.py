@@ -5,9 +5,10 @@ from sklearn.model_selection import train_test_split
 # ===========================================
 # AJUSTE ESTES CAMINHOS CONFORME SEU SISTEMA
 # ===========================================
-SOURCE_IMAGES_COM = '/home/inet/Área de Trabalho/test_visor/novos_dados_ip/com_adesivo'
-SOURCE_IMAGES_SEM = '/home/inet/Área de Trabalho/test_visor/novos_dados_ip/sem_adesivo'
-SOURCE_LABELS = '/home/inet//Downloads/esse(1)'
+# Use r'' (raw string) ou barras duplas \\ ou barras normais / no Windows
+SOURCE_IMAGES_COM = r'C:\Users\jo060842\Documents\porj_adesivo\novos_dados_ip\com_adesivo'
+SOURCE_IMAGES_SEM = r'C:\Users\jo060842\Documents\porj_adesivo\novos_dados_ip\sem_adesivo'
+SOURCE_LABELS = r'C:\Users\jo060842\Downloads\esse(1)'
 # Criar estrutura de pastas
 print("Criando estrutura de pastas...")
 os.makedirs('dataset/images/train', exist_ok=True)

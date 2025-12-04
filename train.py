@@ -21,7 +21,7 @@ print("Iniciando treinamento...")
 print("="*60)
 
 # Carregar modelo pré-treinado YOLOv8 nano (o mais leve)
-model = YOLO('yolov8s.pt')
+model = YOLO('yolov8n.pt')
 
 results = model.train(
     data='data.yaml',
@@ -31,7 +31,7 @@ results = model.train(
     patience=20,
     device=device,
     project='adesivo_detection',
-    name='run1',
+    name='run2',
     save=True,
     plots=False,        # antes True
     workers=1,          # antes 4
