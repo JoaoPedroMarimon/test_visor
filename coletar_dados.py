@@ -24,6 +24,7 @@ ULTRA_FAST_MODE = True  # Modo ultra-rápido: menos overlays, mais FPS
 # Criar pastas
 os.makedirs('novos_dados_ip/com_adesivo', exist_ok=True)
 os.makedirs('novos_dados_ip/sem_adesivo', exist_ok=True)
+os.makedirs('novos_dados_ip/com_laranja', exist_ok=True)
 
 # Arquivo para salvar contadores
 COUNTER_FILE = 'coleta_contadores.json'
@@ -84,7 +85,7 @@ cap.set(cv2.CAP_PROP_FPS, 30)  # Solicitar 30 FPS
 print("\n" + "="*60)
 print("COLETA INICIADA")
 print("="*60)
-print("C=COM | S=SEM | Q=SAIR")
+print("C=COM ADESIVO | S=SEM ADESIVO | L=COM LARANJA | Q=SAIR")
 print("="*60 + "\n")
 
 # Carregar contador global
@@ -184,7 +185,7 @@ while running:
             fps = len(fps_counter) / (fps_counter[-1] - fps_counter[0])
             cv2.putText(display, f"FPS:{fps:.0f}", (10, 55), cv2.FONT_HERSHEY_PLAIN, 1.2, (0, 255, 0), 2)
 
-        cv2.putText(display, "C=COM S=SEM Q=SAIR",
+        cv2.putText(display, "C=COM S=SEM L=LARANJA Q=SAIR",
                    (10, height - 10), cv2.FONT_HERSHEY_PLAIN, 1, (255, 255, 255), 1)
 
         cv2.circle(display, (width - 15, 15), 5, (0, 255, 0), -1)
@@ -216,6 +217,15 @@ while running:
             salvar_contador(contador_global)  # Salvar após cada captura
             last_save_time = current_time
             print(f"✓ SEM [imagem_{contador_global}]")
+
+    elif key == ord('l') or key == ord('L'):
+        if current_time - last_save_time > 0.15:
+            contador_global += 1
+            filename = f'novos_dados_ip/com_laranja/imagem_{contador_global}.jpg'
+            cv2.imwrite(filename, frame, [cv2.IMWRITE_JPEG_QUALITY, 95])
+            salvar_contador(contador_global)  # Salvar após cada captura
+            last_save_time = current_time
+            print(f"🟠 LARANJA [imagem_{contador_global}]")
 
 # Limpar
 running = False

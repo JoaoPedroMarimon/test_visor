@@ -4,6 +4,7 @@ import numpy as np
 import time
 from collections import deque
 import threading
+import torch
 
 # ===========================================
 # CONFIGURAÇÃO DA CÂMERA IP
@@ -15,22 +16,35 @@ CAMERA_PASS = "admin123"
 # URL RTSP (Dahua)
 RTSP_URL = f"rtsp://{CAMERA_USER}:{CAMERA_PASS}@{CAMERA_IP}:554/cam/realmonitor?channel=1&subtype=0"
 
-# Configurações
-WINDOW_WIDTH = 1024
-WINDOW_HEIGHT = 768
-PROCESS_EVERY_N_FRAMES = 2  # Processar detecção a cada 2 frames
+# Configurações de Performance (ajustadas para CPU)
+WINDOW_WIDTH = 800  # Reduzido de 1024
+WINDOW_HEIGHT = 600  # Reduzido de 768
+PROCESS_EVERY_N_FRAMES = 4  # Aumentado de 3 para 4
+INFERENCE_SIZE = 320  # Reduzido de 416 para 320 (muito mais rápido)
 
-# Carregar modelo V2 (2 classes)
+# Detectar dispositivo disponível
+if torch.cuda.is_available():
+    device = 0
+    device_name = torch.cuda.get_device_name(0)
+    print(f"✓ GPU detectada: {device_name}")
+else:
+    device = 'cpu'
+    print("⚠ GPU não detectada. Usando CPU (mais lento)")
+
+# Carregar modelo V2 (2 classes) com otimizações
 print("Carregando modelo V2 (com/sem adesivo)...")
-model = YOLO('adesivo_detection/run3/weights/best.pt')
-print("✓ Modelo V2 carregado!")
+model = YOLO('adesivo_detection/v2_dual_class3/weights/best.pt')
+model.fuse()  # Fusão de camadas para maior velocidade
+print("✓ Modelo V2 carregado e otimizado!")
 
 # Conectar via RTSP
 print(f"\nConectando ao stream RTSP...")
 print(f"  URL: {RTSP_URL.replace(CAMERA_PASS, '***')}")
 
 cap = cv2.VideoCapture(RTSP_URL)
-cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+# Otimizações de captura
+cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Buffer mínimo para reduzir latência
+cap.set(cv2.CAP_PROP_FPS, 15)  # Limitar FPS da captura
 
 # Testar conexão
 print("Testando conexão...")
@@ -52,13 +66,14 @@ print("INSPETOR DE ADESIVO V2 - DETECÇÃO DUAL CLASS")
 print("="*60)
 print("📹 Sistema iniciado!")
 print("🎨 Classes: COM_ADESIVO (Verde) | SEM_ADESIVO (Laranja)")
+print(f"⚡ Otimizações: Inferência {INFERENCE_SIZE}x{INFERENCE_SIZE} | Skip {PROCESS_EVERY_N_FRAMES} frames")
 print("⌨️  Q - Sair | S - Salvar | 1/2 - COM | 3/4 - SEM")
 print("="*60 + "\n")
 
 # Configurações - THRESHOLDS SEPARADOS POR CLASSE
 threshold_com_adesivo = 0.80    # Limiar para com_adesivo
 threshold_sem_adesivo = 0.80    # Limiar para sem_adesivo (mais sensível)
-confidence_threshold_geral = 0.3  # Limiar geral para o modelo detectar
+confidence_threshold_geral = 0.7  # Limiar geral para o modelo detectar
 
 detection_history = []
 HISTORY_SIZE = 10
@@ -136,12 +151,30 @@ while running:
 
     # Processar detecção apenas a cada N frames
     if frame_count % PROCESS_EVERY_N_FRAMES == 0:
-        # Redimensionar para processamento mais rápido
+        # Redimensionar display
         frame_resized = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT))
-        results = model.predict(source=frame_resized, conf=confidence_threshold_geral, verbose=False)
+
+        # Redimensionar para inferência (menor = mais rápido)
+        frame_inference = cv2.resize(frame, (INFERENCE_SIZE, INFERENCE_SIZE))
+
+        # Predição otimizada para CPU
+        results = model.predict(
+            source=frame_inference,
+            conf=confidence_threshold_geral,
+            verbose=False,
+            imgsz=INFERENCE_SIZE,
+            half=False,
+            device=device,
+            agnostic_nms=True,  # NMS mais rápido
+            max_det=10  # Limita detecções (acelera pós-processamento)
+        )
 
         # Processar resultado - TODAS AS DETECÇÕES
         display_frame = frame_resized.copy()
+
+        # Calcular fator de escala (inferência -> display)
+        scale_x = WINDOW_WIDTH / INFERENCE_SIZE
+        scale_y = WINDOW_HEIGHT / INFERENCE_SIZE
 
         for result in results:
             boxes = result.boxes
@@ -154,10 +187,18 @@ while running:
                     class_name = result.names[cls]
                     coords = box.xyxy[0].cpu().numpy()
 
+                    # Escalar coordenadas para tamanho do display
+                    coords_scaled = [
+                        coords[0] * scale_x,
+                        coords[1] * scale_y,
+                        coords[2] * scale_x,
+                        coords[3] * scale_y
+                    ]
+
                     all_detections.append({
                         'class': class_name,
                         'conf': conf,
-                        'coords': coords
+                        'coords': coords_scaled
                     })
 
         # Desenhar todas as detecções com máscaras
