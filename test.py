@@ -23,7 +23,7 @@ PROCESS_EVERY_N_FRAMES = 2  # Processar detecção a cada 2 frames
 # Carregar modelo
 print("Carregando modelo...")
 #model = YOLO('adesivo_detection/adesivo_detection_results/weights/best.pt')
-model = YOLO('adesivo_detection/run1/weights/best.pt')
+model = YOLO('adesivo_detection/v2_dual_class3/weights/best.pt')
 
 print("✓ Modelo carregado!")
 

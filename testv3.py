@@ -410,7 +410,7 @@ relay_state = None
 relay_timer = None  # Timer para desligar após 0.1 segundos
 relay_cooldown_timer = None  # Timer de cooldown - só pode ativar de novo após 3 segundos
 RELAY_DELAY = 0.1   # Tempo em segundos para manter relé ligado
-RELAY_COOLDOWN = 3.0  # Tempo de espera antes de poder ativar novamente
+RELAY_COOLDOWN = 2.0  # Tempo de espera antes de poder ativar novamente
 
 cv2.namedWindow('Inspetor de Adesivo V3', cv2.WINDOW_NORMAL)
 
