@@ -5,8 +5,8 @@ from sklearn.model_selection import train_test_split
 # ===========================================
 # AJUSTE ESTES CAMINHOS CONFORME SEU SISTEMA
 # ===========================================
-SOURCE_IMAGES_LARANJA = r'C:\Users\jo063877\Desktop\test_visor\novos_dados_ip\com_laranja'
-SOURCE_LABELS = r'C:\Users\jo063877\Downloads\labels_my-project-name_2026-03-18-09-44-59'
+SOURCE_IMAGES_LARANJA = r'C:\Users\jo063877\Pictures\Camera Roll'
+SOURCE_LABELS = r'C:\Users\jo063877\Downloads\labels_my-project-name_2026-03-26-07-47-40'
 
 # Criar estrutura de pastas
 print("Criando estrutura de pastas...")

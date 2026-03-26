@@ -21,7 +21,7 @@ print("Classes: com_laranja, sem_laranja")
 print("="*60)
 
 # Carregar modelo pré-treinado YOLOv8 nano (o mais leve)
-model = YOLO('yolov8n.pt')
+model = YOLO('yolov8s.pt')
 
 results = model.train(
     data='data_laranja.yaml',

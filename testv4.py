@@ -437,7 +437,7 @@ else:
     print("⚠ GPU não detectada — usando CPU")
 
 print("Carregando modelo...")
-model = YOLO(r'C:\Users\jo063877\Desktop\test_visor\runs\detect\adesivo_detection\v3_duas_classes6\weights\best.pt')
+model = YOLO(r'C:\Users\jo063877\Desktop\test_visor\runs\detect\adesivo_detection\v3_duas_classes10\weights\best.pt')
 model.fuse()
 print("✓ Modelo carregado!")
 
@@ -470,7 +470,7 @@ print("="*65 + "\n")
 
 # Thresholds por classe
 threshold_com_laranja = 0.40
-threshold_sem_laranja  = 0.71
+threshold_sem_laranja  = 0.60
 
 FAIL_FRAMES_NEEDED = 10   # frames consecutivos de sem_laranja para confirmar FAIL
 fail_frame_counter = 0
@@ -616,7 +616,7 @@ while running:
 
             cv2.rectangle(display_frame, (x1, y1), (x2, y2), color, 2)
             put_text_bg(display_frame,
-                        f"Adesivo {i+1}: {status_s} ({conf:.0%})",
+                        f"{conf:.0%}",
                         (x1+2, y1-6),
                         cv2.FONT_HERSHEY_PLAIN, 1.1, color, 1, (0,0,0), 3)
 
