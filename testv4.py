@@ -41,8 +41,10 @@ RTSP_URL = f"rtsp://{CAMERA_USER}:{CAMERA_PASS}@{CAMERA_IP}:554/cam/realmonitor?
 # Configurações de Performance
 WINDOW_WIDTH  = 800
 WINDOW_HEIGHT = 600
-PANEL_WIDTH   = 320
-TOTAL_WIDTH   = WINDOW_WIDTH + PANEL_WIDTH
+PANEL_WIDTH    = 320
+TOTAL_WIDTH    = WINDOW_WIDTH + PANEL_WIDTH
+STATUS_STRIP_H = 60
+CAM_HEIGHT     = WINDOW_HEIGHT - STATUS_STRIP_H
 PROCESS_EVERY_N_FRAMES = 5
 INFERENCE_SIZE = 640
 
@@ -237,7 +239,7 @@ def start_alarm():
 
 
 def stop_alarm():
-    global alarm_active, relay_state, relay_timer, relay_cooldown_timer
+    global alarm_active, relay_state, relay_timer, relay_cooldown_timer, relay_blink_timer
     if not alarm_active:
         return
     if SOUND_AVAILABLE:
@@ -247,12 +249,13 @@ def stop_alarm():
             pass
     alarm_active = False
     # Desliga relé ao parar o alarme
-    if relay.connected and relay_state == 'ligado':
+    if relay.connected:
         canal = RELAY_CONFIG['canal_alarme']
         relay.relay_off(canal)
         relay_state          = 'desligado'
         relay_timer          = None
         relay_cooldown_timer = None
+        relay_blink_timer    = None
     print("🔇 Alarme parado pelo operador")
 
 
@@ -317,7 +320,7 @@ def draw_stop_button_on_panel(panel, flash_counter):
     cv2.putText(panel, hint, (hx, by+bh-8), cv2.FONT_HERSHEY_PLAIN, 1.0, (220, 220, 100), 1)
 
 
-def draw_right_panel(stable_status, prod_stats, recent_failures, flash_counter, relay_text, relay_color, alarm_on=False):
+def draw_right_panel(prod_stats, recent_failures, flash_counter, alarm_on=False):
     panel = np.zeros((WINDOW_HEIGHT, PANEL_WIDTH, 3), dtype=np.uint8)
     panel[:] = C_BG_PANEL
 
@@ -325,67 +328,20 @@ def draw_right_panel(stable_status, prod_stats, recent_failures, flash_counter, 
 
     # --- Cabeçalho ---
     cv2.rectangle(panel, (0, 0), (PANEL_WIDTH, 38), C_BG_HEADER, -1)
-    cv2.putText(panel, "INSPETOR V4", (10, 26),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.72, C_ACCENT, 2)
-    # Status relé à direita do header
-    cv2.putText(panel, relay_text, (PANEL_WIDTH - 105, 26),
-                cv2.FONT_HERSHEY_PLAIN, 1.05, relay_color, 1)
+    cv2.putText(panel, "Inspecao Adesivo", (10, 26),
+                cv2.FONT_HERSHEY_SIMPLEX, 0.65, C_ACCENT, 2)
     y = 44
 
-    # --- Indicador PASS / FAIL ---
-    ind_h = 108
-    if stable_status == 'com_laranja':
-        ind_bg   = C_PASS
-        ind_text = "PASS"
-        ind_sub  = "ADESIVO PRESENTE"
-        ind_fg   = (210, 255, 210)
-    elif stable_status == 'sem_laranja':
-        blink    = (flash_counter // FLASH_PERIOD_FRAMES) % 2 == 0
-        ind_bg   = (0, 0, 200) if blink else (0, 0, 130)
-        ind_text = "FAIL"
-        ind_sub  = "ADESIVO AUSENTE"
-        ind_fg   = (255, 210, 210)
-    else:
-        ind_bg   = C_WAIT
-        ind_text = "---"
-        ind_sub  = "AGUARDANDO"
-        ind_fg   = (120, 180, 120)
-
-    cv2.rectangle(panel, (4, y), (PANEL_WIDTH-4, y+ind_h), ind_bg, -1)
-    cv2.rectangle(panel, (4, y), (PANEL_WIDTH-4, y+ind_h), C_DIVIDER, 1)
-
-    (tw, th), _ = cv2.getTextSize(ind_text, cv2.FONT_HERSHEY_DUPLEX, 2.8, 3)
-    tx = (PANEL_WIDTH - tw) // 2
-    cv2.putText(panel, ind_text, (tx+2, y+72), cv2.FONT_HERSHEY_DUPLEX, 2.8, (0,0,0), 5)
-    cv2.putText(panel, ind_text, (tx,   y+70), cv2.FONT_HERSHEY_DUPLEX, 2.8, ind_fg, 3)
-    (sw, _), _ = cv2.getTextSize(ind_sub, cv2.FONT_HERSHEY_PLAIN, 1.2, 1)
-    sx = (PANEL_WIDTH - sw) // 2
-    cv2.putText(panel, ind_sub, (sx, y+100), cv2.FONT_HERSHEY_PLAIN, 1.2, ind_fg, 1)
-
-    y += ind_h + 10
-    cv2.line(panel, (4, y), (PANEL_WIDTH-4, y), C_DIVIDER, 1)
-    y += 8
-
-    # --- Contadores de Produção ---
-    cv2.putText(panel, "PRODUCAO ATUAL", (8, y+14),
+    # --- Contagem de Falhas ---
+    cv2.putText(panel, "PRODUCAO", (8, y+14),
                 cv2.FONT_HERSHEY_PLAIN, 1.05, C_TEXT_TITLE, 1)
     y += 22
 
-    total = prod_stats['total']
-    ok    = prod_stats['pass']
-    fail  = prod_stats['fail']
-    rate  = (fail / total * 100) if total > 0 else 0.0
+    fail = prod_stats['fail']
+    cv2.putText(panel, f"FAIL:   {fail:5d}", (10, y+17),
+                cv2.FONT_HERSHEY_PLAIN, 1.3, (80, 80, 230), 1)
+    y += 26
 
-    for line, color in [
-        (f"Total:  {total:5d}", C_TEXT_BODY),
-        (f"OK:     {ok:5d}",    (0, 215, 0)),
-        (f"FAIL:   {fail:5d}",  (80, 80, 230)),
-        (f"Erro:   {rate:5.1f}%", (0,165,255) if rate > 2 else (0, 215, 0)),
-    ]:
-        cv2.putText(panel, line, (10, y+17), cv2.FONT_HERSHEY_PLAIN, 1.3, color, 1)
-        y += 22
-
-    y += 6
     cv2.line(panel, (4, y), (PANEL_WIDTH-4, y), C_DIVIDER, 1)
     y += 8
 
@@ -437,7 +393,7 @@ else:
     print("⚠ GPU não detectada — usando CPU")
 
 print("Carregando modelo...")
-model = YOLO(r'C:\Users\jo063877\Desktop\test_visor\runs\detect\adesivo_detection\v3_duas_classes10\weights\best.pt')
+model = YOLO(r'C:\Users\jo063877\Desktop\test_visor\runs\detect\adesivo_detection\v3_duas_classes13\weights\best.pt')
 model.fuse()
 print("✓ Modelo carregado!")
 
@@ -470,7 +426,7 @@ print("="*65 + "\n")
 
 # Thresholds por classe
 threshold_com_laranja = 0.40
-threshold_sem_laranja  = 0.60
+threshold_sem_laranja  = 0.69
 
 FAIL_FRAMES_NEEDED = 10   # frames consecutivos de sem_laranja para confirmar FAIL
 fail_frame_counter = 0
@@ -507,8 +463,10 @@ fps_counter    = deque(maxlen=30)
 relay_state          = None
 relay_timer          = None
 relay_cooldown_timer = None
+relay_blink_timer    = None
 RELAY_DELAY          = 0.1
 RELAY_COOLDOWN       = 2.0
+RELAY_BLINK_DELAY    = 0.5   # segundos entre liga/desliga durante alarme
 
 # Produção
 prod_stats      = {'total': 0, 'pass': 0, 'fail': 0}
@@ -524,7 +482,7 @@ display_frame  = None
 ROI = None   # ex: (100, 80, 700, 520) para ativar
 
 cv2.namedWindow('Inspetor de Adesivo V4', cv2.WINDOW_NORMAL)
-cv2.resizeWindow('Inspetor de Adesivo V4', TOTAL_WIDTH, WINDOW_HEIGHT)
+cv2.setWindowProperty('Inspetor de Adesivo V4', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
 
 # ===========================================
 # LOOP PRINCIPAL
@@ -555,7 +513,7 @@ while running:
     # DETECÇÃO (a cada N frames)
     # -----------------------------------------------
     if frame_count % PROCESS_EVERY_N_FRAMES == 0:
-        frame_resized  = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT),
+        frame_resized  = cv2.resize(frame, (WINDOW_WIDTH, CAM_HEIGHT),
                                     interpolation=cv2.INTER_LINEAR)   # melhor qualidade no display
         frame_inference = cv2.resize(frame, (INFERENCE_SIZE, INFERENCE_SIZE),
                                      interpolation=cv2.INTER_NEAREST)  # rápido, só para o modelo
@@ -574,7 +532,7 @@ while running:
 
         display_frame  = frame_resized.copy()
         scale_x = WINDOW_WIDTH  / INFERENCE_SIZE
-        scale_y = WINDOW_HEIGHT / INFERENCE_SIZE
+        scale_y = CAM_HEIGHT / INFERENCE_SIZE
 
         all_detections = []
         for result in results:
@@ -608,7 +566,7 @@ while running:
             x1, y1, x2, y2 = map(int, det['coords'])
 
             if name == 'com_laranja':
-                color    = (0, 200, 255)   # laranja
+                color    = (0, 200, 0)   # verde
                 status_s = "OK"
             else:
                 color    = (0, 50, 230)
@@ -641,7 +599,7 @@ while running:
         # frame pulado (não é frame de inferência) — mantém status anterior
         stable_status = last_stable_status if last_stable_status is not None else 'com_laranja'
         if display_frame is None:
-            fr = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT),
+            fr = cv2.resize(frame, (WINDOW_WIDTH, CAM_HEIGHT),
                             interpolation=cv2.INTER_LINEAR)
             display_frame = fr.copy()
 
@@ -668,17 +626,18 @@ while running:
     last_stable_status = stable_status
 
     # -----------------------------------------------
-    # CONTROLE DO RELÉ
+    # CONTROLE DO RELÉ — pisca enquanto alarme ativo
     # -----------------------------------------------
-    if relay.connected:
-        canal      = RELAY_CONFIG['canal_alarme']
-        em_cooldown = (relay_cooldown_timer is not None and
-                       (current_time - relay_cooldown_timer) < RELAY_COOLDOWN)
-
-        if stable_status == 'sem_laranja' and relay_state != 'ligado':
-            if relay.relay_on(canal):
+    if relay.connected and alarm_active:
+        canal = RELAY_CONFIG['canal_alarme']
+        if relay_blink_timer is None or (current_time - relay_blink_timer) >= RELAY_BLINK_DELAY:
+            relay_blink_timer = current_time
+            if relay_state == 'ligado':
+                relay.relay_off(canal)
+                relay_state = 'desligado'
+            else:
+                relay.relay_on(canal)
                 relay_state = 'ligado'
-                relay_timer = None   # sem auto-desligar por timer
 
     # -----------------------------------------------
     # OVERLAY NA CÂMERA
@@ -690,51 +649,38 @@ while running:
         if (flash_counter // FLASH_PERIOD_FRAMES) % 2 == 0:
             cv2.rectangle(display_frame, (0, 0), (w-1, h-1), (0, 0, 255), 8)
 
-    # Barra top verde escura
-    cv2.rectangle(display_frame, (0, 0), (w, 36), C_CAM_BAR, -1)
-    cv2.rectangle(display_frame, (0, 36), (w, 37), C_DIVIDER, -1)
-
-    # FPS
-    if len(fps_counter) > 1:
-        fps = len(fps_counter) / (fps_counter[-1] - fps_counter[0])
-        put_text_bg(display_frame, f"{fps:.0f} fps",
-                    (w-72, 25), cv2.FONT_HERSHEY_PLAIN, 1.3,
-                    C_ACCENT, 1, C_CAM_BAR)
-
-    # Status relé na barra top
-    if relay.connected:
-        if relay_state == 'ligado' and relay_timer:
-            t = max(0.0, RELAY_DELAY - (current_time - relay_timer))
-            rtxt, rcol = f"RELE ON {t:.1f}s", (0, 0, 255)
-        elif relay_cooldown_timer and (current_time - relay_cooldown_timer) < RELAY_COOLDOWN:
-            t = max(0.0, RELAY_COOLDOWN - (current_time - relay_cooldown_timer))
-            rtxt, rcol = f"RELE CD {t:.1f}s", (0, 165, 255)
-        else:
-            rtxt, rcol = "RELE OFF", C_ACCENT
-    else:
-        rtxt, rcol = "RELE N/A", C_TEXT_DIM
-
-    cv2.putText(display_frame, rtxt, (8, 25),
-                cv2.FONT_HERSHEY_PLAIN, 1.3, rcol, 1)
 
 
 
-    # Thresholds (rodapé)
-    put_text_bg(display_frame,
-                f"thr com:{threshold_com_laranja:.0%}  sem:{threshold_sem_laranja:.0%}",
-                (6, h-8), cv2.FONT_HERSHEY_PLAIN, 0.9, C_TEXT_DIM, 1, C_CAM_BAR)
-
-    # -----------------------------------------------
+# -----------------------------------------------
     # PAINEL LATERAL
     # -----------------------------------------------
     panel = draw_right_panel(
-        stable_status, prod_stats, recent_failures,
-        flash_counter, rtxt, rcol,
+        prod_stats, recent_failures,
+        flash_counter,
         alarm_on=alarm_active
     )
 
+    # Faixa PASS/FAIL abaixo da câmera
+    strip = np.zeros((STATUS_STRIP_H, WINDOW_WIDTH, 3), dtype=np.uint8)
+    if stable_status == 'com_laranja':
+        strip[:] = C_PASS
+        s_text, s_fg = "CAIXA OK", (210, 255, 210)
+    elif stable_status == 'sem_laranja':
+        blink_s = (flash_counter // FLASH_PERIOD_FRAMES) % 2 == 0
+        strip[:] = (0, 0, 200) if blink_s else (0, 0, 130)
+        s_text, s_fg = "REPROVADO", (255, 210, 210)
+    else:
+        strip[:] = C_WAIT
+        s_text, s_fg = "AGUARDANDO", (120, 180, 120)
+    (tw, _), _ = cv2.getTextSize(s_text, cv2.FONT_HERSHEY_DUPLEX, 1.2, 2)
+    tx = (WINDOW_WIDTH - tw) // 2
+    cv2.putText(strip, s_text, (tx+2, STATUS_STRIP_H-14), cv2.FONT_HERSHEY_DUPLEX, 1.2, (0,0,0), 4)
+    cv2.putText(strip, s_text, (tx,   STATUS_STRIP_H-16), cv2.FONT_HERSHEY_DUPLEX, 1.2, s_fg, 2)
+
+    left = np.vstack([display_frame, strip])
     sep = np.full((WINDOW_HEIGHT, 2, 3), 20, dtype=np.uint8)
-    combined = np.hstack([display_frame, sep, panel])
+    combined = np.hstack([left, sep, panel])
     cv2.imshow('Inspetor de Adesivo V4', combined)
 
     # -----------------------------------------------
